@@ -168,7 +168,7 @@ define(function (require, exports, module) {
                 break;
             }
         }
-        return allBlanks || containsNotLineComment;
+        return { allBlanks: allBlanks, canComment: containsNotLineComment || allBlanks };
     }
     
     /**
@@ -221,14 +221,14 @@ define(function (require, exports, module) {
             prefix                  = prefixes[0] + (commentAtStart ? "" : " "),
             containsNotLineComment  = _containsNotLineComment(editor, startLine, endLine, lineExp);
         
-        if (containsNotLineComment) {
+        if (containsNotLineComment.canComment) {
             // Get the position where we want to place the comment prefix
             if (!commentAtStart) {
                 startCh = null;
                 for (i = startLine; i <= endLine; i++) {
                     line      = doc.getLine(i);
                     lineStart = line.match(/^(\s*)/)[1].length;
-                    if (line.length && (startCh === null || lineStart <= startCh)) {
+                    if ((!line.match(/^\s*$/) || containsNotLineComment.allBlanks) && (startCh === null || lineStart <= startCh)) {
                         startCh = lineStart;
                     }
                 }
@@ -241,8 +241,8 @@ define(function (require, exports, module) {
                 if (hasIndentComments) {
                     startChs[i] = line.match(/^(\s*)/)[1].length;
                     editGroup.push({text: prefix, start: {line: i, ch: startChs[i]}});
-                // Only comment non-empty lines (including lines with only whitespaces), unless the position is at the char 0
-                } else if ((line.length && startCh > 0) || startCh === 0) {
+                // Only comment non-empty lines (including lines with only whitespaces), unless all the lines are blank
+                } else if ((line.length && !line.match(/^\s*$/)) || containsNotLineComment.allBlanks) {
                     editGroup.push({text: prefix, start: {line: i, ch: startCh}});
                 }
             }
